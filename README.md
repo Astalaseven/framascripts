@@ -1,4 +1,5 @@
 framascripts
 ============
 
-Some useful scritps
+Some useful scripts.
+
