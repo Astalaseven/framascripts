@@ -54,8 +54,9 @@ def don_is_expired(browser, reference, date_don, tpe_id):
     try:
         expiration = fiche.split('expiration de la carte bancaire du client')[1][:5]
         next_month_exp = next_month.strftime('%m/%y')
-        if next_month_exp == expiration:
-            return True
+        current_month_exp = now().strftime('%m/%y')
+        if expiration in (next_month_exp, current_month_exp):
+            return expiration
     except IndexError:
         return False
 
@@ -124,8 +125,9 @@ def get_dons(type_don='Recurrent'):
                 if etat.encode('iso-8859-1') != 'Pay\xe9':
                     unpaid.append(num_commande)
 
-                if don_is_expired(br, num_commande, pay_date, TPE_ID):
-                    expired.append(num_commande)
+                exp = don_is_expired(br, num_commande, pay_date, TPE_ID)
+                if exp:
+                    expired.append((num_commande, exp))
 
     return total_amount, total_donateur, unpaid, expired
 
@@ -148,4 +150,4 @@ if __name__ == '__main__':
     print '----------------------------------'
     print '### Détails des cartes expirées : ###'
     for ex in expired:
-        print '# Référence : %s' % ex
+        print '# Référence : %s (expiration : %s)' % (ex[0], ex[1])
