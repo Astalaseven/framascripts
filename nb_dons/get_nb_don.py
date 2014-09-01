@@ -31,9 +31,35 @@ from lxml import etree
 
 
 last_month = now() + RelativeDateTime(months=-1, days=1)
+next_month = now() + RelativeDateTime(months=1, day=1)
 DATE_FIN = '%s/%s/%s' % (now().day, str(now().month).rjust(2, '0'), now().year)
 DATE_DEBUT = '%s/%s/%s' % (last_month.day, str(last_month.month).rjust(2, '0'), last_month.year)
 
+def don_is_expired(browser, reference, date_don, tpe_id):
+    '''
+    Retourne True si la carte qui a servi à faire le don expire le mois prochain
+    '''
+    url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/DetailPaiement.aspx?reference=%(reference)s&tpe=%(tpe_id)s&date=%(date_don)s&tpe_id=%(tpe_id)s:PR' % {
+        'date_don': date_don,
+        'tpe_id': tpe_id,
+        'reference': reference,
+    }
+    r = browser.open(url)
+    html = r.read()
+
+    from BeautifulSoup import BeautifulSoup
+    parsed_html = BeautifulSoup(html)
+
+    fiche = parsed_html.body.find('table', attrs={'class': 'fiche'}).text
+    try:
+        expiration = fiche.split('expiration de la carte bancaire du client')[1][:5]
+        next_month_exp = next_month.strftime('%m/%y')
+        if next_month_exp == expiration:
+            return True
+    except IndexError:
+        return False
+
+    return False
 
 def get_dons(type_don='Recurrent'):
     assert type_don in ('Recurrent', 'Ponctuel'), "Le type de don doit être 'Récurrent' ou 'Ponctuel'"
@@ -73,8 +99,7 @@ def get_dons(type_don='Recurrent'):
 
     TPE_ID = config.get(type_don, 'tpe_id')
 
-    
-    url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__EVENTTARGET=&__EVENTARGUMENT=&tpe_id=%s:PR&commande_action=&commande_tri=commande_date+de+paiement&commande_sens=1&commande_page=0&SelectionCritere=Achat&Date_Debut=%s&Date_Fin=%s&Reference=&Paye=on&Paye.p=&Annule.p=&Refuse.p=&PartiellementPaye=on&PartiellementPaye.p=&Enregistre.p=&CarteNonSaisie.p=&EnCours=on&EnCours.p=&Montant_Min=&Montant_Max=&Currency=EUR&SelectionAffichage=Ecran&AdresseMail=&Btn.Find.x=19&Btn.Find.y=10&NumeroTpe=%s:PR&export=XML' % (TPE_ID, DATE_DEBUT, DATE_FIN, TPE_ID)
+    url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__EVENTTARGET=&__EVENTARGUMENT=&__VIEWSTATE=/wEPDwULLTE1NDI1MDc3MTVkZA==&tpe_id=%s:PR&commande_action=&commande_tri=commande_date+de+paiement&commande_sens=1&commande_page=1&SelectionCritere=Achat&Date_Debut=%s&Date_Fin=%s&Reference=&Paye=on&Paye.p=&Annule.p=&Refuse.p=&PartiellementPaye=on&PartiellementPaye.p=&Enregistre=on&Enregistre.p=&CarteNonSaisie.p=&EnCours=on&EnCours.p=&Montant_Min=&Montant_Max=&Currency=EUR&SelectionAffichage=Ecran&AdresseMail=&Btn.Find.x=61&Btn.Find.y=8&NumeroTpe=%s:PR&export=XML' % (TPE_ID, DATE_DEBUT, DATE_FIN, TPE_ID)
     r = br.open(url)
     html = r.read()
 
@@ -82,22 +107,45 @@ def get_dons(type_don='Recurrent'):
     total_donateur = 0
 
     root = etree.XML(html)
+
+    unpaid = []
+    expired = []
+
     for element in root.iter("IEnumerableOfXmlCommande"):
         for commande in element.iter("Commande"):
             num_commande = commande.find('Reference').text
             montant = commande.find('Montant').find('Valeur').text
+            pay_date = commande.find('DatePaiement').text[:10]
+            etat = commande.find('Etat').text
             total_amount += float(montant)
             total_donateur += 1
 
-    return total_amount, total_donateur
+            if type_don == 'Recurrent':
+                if etat.encode('iso-8859-1') != 'Pay\xe9':
+                    unpaid.append(num_commande)
+
+                if don_is_expired(br, num_commande, pay_date, TPE_ID):
+                    expired.append(num_commande)
+
+    return total_amount, total_donateur, unpaid, expired
 
 if __name__ == '__main__':
-    rec_amount, rec_nb = get_dons('Recurrent')
-    ponc_amount, ponc_nb = get_dons('Ponctuel')
+    rec_amount, rec_nb, unpaid, expired = get_dons('Recurrent')
+    ponc_amount, ponc_nb, ponc_un, ponc_ex = get_dons('Ponctuel')
     print 'Du %s au %s' % (DATE_DEBUT, DATE_FIN)
-    print '----------------------------------'
-    print '# Total de dons récurrents : %s' % rec_amount
-    print '# Nombre de donateurs récurrents : %s' % rec_nb
     print '----------------------------------'
     print '# Total de dons ponctuels : %s' % ponc_amount
     print '# Nombre de donateurs ponctuels : %s' % ponc_nb
+    print '----------------------------------'
+    print '# Total de dons récurrents : %s' % rec_amount
+    print '# Nombre de donateurs récurrents : %s' % rec_nb
+    print '# Nombre de carte expirées : %s' % len(expired)
+    print '# Nombre de don qui requiert une action : %s' % len(unpaid)
+    print '----------------------------------'
+    print '### Détails des dons qui requiert une action : ###'
+    for un in unpaid:
+        print '# Référence : %s' % un
+    print '----------------------------------'
+    print '### Détails des cartes expirées : ###'
+    for ex in expired:
+        print '# Référence : %s' % ex
