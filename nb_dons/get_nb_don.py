@@ -2,7 +2,7 @@
 ##############################################################################
 #
 #   Framasoft
-#   
+#
 #   This program is free software: you can redistribute it and/or modify
 #   it under the terms of the GNU General Public Licence as
 #   published by the Free Software Foundation, either version 2 of the
@@ -23,9 +23,12 @@
 import ConfigParser
 import mechanize
 import cookielib
+import json
+import argparse
 
 from mx.DateTime import RelativeDateTime
 from mx.DateTime import now
+from BeautifulSoup import BeautifulSoup
 
 from lxml import etree
 
@@ -47,7 +50,6 @@ def don_is_expired(browser, reference, date_don, tpe_id):
     r = browser.open(url)
     html = r.read()
 
-    from BeautifulSoup import BeautifulSoup
     parsed_html = BeautifulSoup(html)
 
     fiche = parsed_html.body.find('table', attrs={'class': 'fiche'}).text
@@ -132,22 +134,50 @@ def get_dons(type_don='Recurrent'):
     return total_amount, total_donateur, unpaid, expired
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Arguments Parser')
+    parser.add_argument(
+        '--export',
+        dest='export',
+        default='stdout',
+        help="""
+Défini le type d\'export (choix possibles: stdout*, json)
+"""
+    )
+
+    args = parser.parse_args()
+
     rec_amount, rec_nb, unpaid, expired = get_dons('Recurrent')
     ponc_amount, ponc_nb, ponc_un, ponc_ex = get_dons('Ponctuel')
-    print 'Du %s au %s' % (DATE_DEBUT, DATE_FIN)
-    print '----------------------------------'
-    print '# Total de dons ponctuels : %s' % ponc_amount
-    print '# Nombre de donateurs ponctuels : %s' % ponc_nb
-    print '----------------------------------'
-    print '# Total de dons récurrents : %s' % rec_amount
-    print '# Nombre de donateurs récurrents : %s' % rec_nb
-    print '# Nombre de carte expirées : %s' % len(expired)
-    print '# Nombre de don qui requiert une action : %s' % len(unpaid)
-    print '----------------------------------'
-    print '### Détails des dons qui requiert une action : ###'
-    for un in unpaid:
-        print '# Référence : %s' % un
-    print '----------------------------------'
-    print '### Détails des cartes expirées : ###'
-    for ex in expired:
-        print '# Référence : %s (expiration : %s)' % (ex[0], ex[1])
+
+    if args.export == 'stdout':
+        print 'Du %s au %s' % (DATE_DEBUT, DATE_FIN)
+        print '----------------------------------'
+        print '# Total de dons ponctuels : %s' % ponc_amount
+        print '# Nombre de donateurs ponctuels : %s' % ponc_nb
+        print '----------------------------------'
+        print '# Total de dons récurrents : %s' % rec_amount
+        print '# Nombre de donateurs récurrents : %s' % rec_nb
+        print '# Nombre de carte expirées : %s' % len(expired)
+        print '# Nombre de don qui requiert une action : %s' % len(unpaid)
+        print '----------------------------------'
+        print '### Détails des dons qui requiert une action : ###'
+        for un in unpaid:
+            print '# Référence : %s' % un
+        print '----------------------------------'
+        print '### Détails des cartes expirées : ###'
+        for ex in expired:
+            print '# Référence : %s (expiration : %s)' % (ex[0], ex[1])
+    elif args.export == 'json':
+        res = {
+            'date_debut': DATE_DEBUT,
+            'date_fin': DATE_FIN,
+            'total_ponctuels': ponc_amount,
+            'nb_ponctuels': ponc_nb,
+            'total_recurrents': rec_amount,
+            'nb_reccurents': rec_nb,
+            'nb_expired': len(expired),
+            'nb_action': len(unpaid),
+            'unpaid': unpaid,
+            'expired': [ex for ex in expired],
+        }
+        print json.dumps(res)
