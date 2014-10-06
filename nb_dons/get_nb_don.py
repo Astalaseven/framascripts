@@ -97,10 +97,20 @@ def get_dons(type_don='Recurrent'):
     br.form['_cm_user'] = config.get(type_don, 'cm_user')
     br.form['_cm_pwd'] = config.get(type_don, 'cm_pwd')
 
+    if not br.form['_cm_user']:
+        print 'Pas d\'utilisateur rempli dans le fichier cmcic.cfg !'
+        exit(1)
+    if not br.form['_cm_pwd']:
+        print 'Pas de mot de passe rempli dans le fichier cmcic.cfg !'
+        exit(1)
+
     br.submit()
 
 
     TPE_ID = config.get(type_don, 'tpe_id')
+    if not TPE_ID:
+        print 'Pas numéro de TPE rempli dans le fichier cmcic.cfg !'
+        exit(1)
 
     url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__EVENTTARGET=&__EVENTARGUMENT=&__VIEWSTATE=/wEPDwULLTE1NDI1MDc3MTVkZA==&tpe_id=%s:PR&commande_action=&commande_tri=commande_date+de+paiement&commande_sens=1&commande_page=1&SelectionCritere=Achat&Date_Debut=%s&Date_Fin=%s&Reference=&Paye=on&Paye.p=&Annule.p=&Refuse.p=&PartiellementPaye=on&PartiellementPaye.p=&Enregistre=on&Enregistre.p=&CarteNonSaisie.p=&EnCours=on&EnCours.p=&Montant_Min=&Montant_Max=&Currency=EUR&SelectionAffichage=Ecran&AdresseMail=&Btn.Find.x=61&Btn.Find.y=8&NumeroTpe=%s:PR&export=XML' % (TPE_ID, DATE_DEBUT, DATE_FIN, TPE_ID)
     r = br.open(url)
