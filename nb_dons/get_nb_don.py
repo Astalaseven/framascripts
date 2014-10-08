@@ -64,7 +64,7 @@ def don_is_expired(browser, reference, date_don, tpe_id):
 
     return False
 
-def get_dons(type_don='Recurrent'):
+def get_dons(type_don='Recurrent', full=None):
     assert type_don in ('Recurrent', 'Ponctuel'), "Le type de don doit être 'Récurrent' ou 'Ponctuel'"
     # Config
     config = ConfigParser.ConfigParser()
@@ -133,13 +133,14 @@ def get_dons(type_don='Recurrent'):
             total_amount += float(montant)
             total_donateur += 1
 
-            if type_don == 'Recurrent':
-                if etat.encode('iso-8859-1') != 'Pay\xe9':
-                    unpaid.append(num_commande)
+            if full:
+                if type_don == 'Recurrent':
+                    if etat.encode('iso-8859-1') != 'Pay\xe9':
+                        unpaid.append(num_commande)
 
-                exp = don_is_expired(br, num_commande, pay_date, TPE_ID)
-                if exp:
-                    expired.append((num_commande, exp))
+                    exp = don_is_expired(br, num_commande, pay_date, TPE_ID)
+                    if exp:
+                        expired.append((num_commande, exp))
 
     return total_amount, total_donateur, unpaid, expired
 
@@ -153,11 +154,21 @@ if __name__ == '__main__':
 Défini le type d\'export (choix possibles: stdout*, json)
 """
     )
+    parser.add_argument(
+        '--full',
+        dest='full',
+        default=False,
+        help="""
+Défini si on veut les détails sur les dons expirés/requierent une action (--full=True pour afficher les détails)
+"""
+    )
 
     args = parser.parse_args()
+    full = None
+    full = args.full
 
-    rec_amount, rec_nb, unpaid, expired = get_dons('Recurrent')
-    ponc_amount, ponc_nb, ponc_un, ponc_ex = get_dons('Ponctuel')
+    rec_amount, rec_nb, unpaid, expired = get_dons('Recurrent', full=full)
+    ponc_amount, ponc_nb, ponc_un, ponc_ex = get_dons('Ponctuel', full=full)
 
     if args.export == 'stdout':
         print 'Du %s au %s' % (DATE_DEBUT, DATE_FIN)
