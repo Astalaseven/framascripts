@@ -26,6 +26,11 @@ import cookielib
 import json
 import argparse
 
+import os
+abspath = os.path.abspath(__file__)
+dname = os.path.dirname(abspath)
+
+
 from mx.DateTime import RelativeDateTime
 from mx.DateTime import now
 from BeautifulSoup import BeautifulSoup
@@ -68,7 +73,8 @@ def get_dons(type_don='Recurrent', full=None):
     assert type_don in ('Recurrent', 'Ponctuel'), "Le type de don doit être 'Récurrent' ou 'Ponctuel'"
     # Config
     config = ConfigParser.ConfigParser()
-    config.readfp(open('./cmcic.cfg'))
+    #config.readfp(open('./cmcic.cfg'))
+    config.readfp(open(dname + '/cmcic.cfg'))
 
     # Browser
     br = mechanize.Browser()
