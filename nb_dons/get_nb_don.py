@@ -130,7 +130,7 @@ def get_dons(type_don='Recurrent', full=None):
     unpaid = []
     expired = []
 
-    for element in root.iter("IEnumerableOfXmlCommande"):
+    for element in root.iter("IEnumerableOfCommandeFormatExport"):
         for commande in element.iter("Commande"):
             num_commande = commande.find('Reference').text
             montant = commande.find('Montant').find('Valeur').text
