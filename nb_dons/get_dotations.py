@@ -83,14 +83,10 @@ def card_is_expired(reference, date_dotation, tpe_id):
         return False
 
     
-def get_dotations(donation_type='Recurrent', tpe_id=None, full=False):
+def get_dotations(tpe_id, donation_type='Recurrent', full=False):
     '''Get dotations information from CMCIC website.'''
     authenticate(donation_type)
-    
-    if not tpe_id:
-        print('ERROR: No tpe_id provided')
-        exit()
-    
+
     url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__VIEWSTATE=/wEPDwULLTE1NDI1MDc3MTVkZA==&tpe_id={0}:PR&SelectionCritere=Achat&Date_Debut={1}&Date_Fin={2}&NumeroTpe={0}:PR&export=XML'.format(tpe_id, begin_date(), end_date())
     
     root = et.fromstring(s.get(url).content)
@@ -166,8 +162,8 @@ if __name__ == '__main__':
     
     cm_user, cm_pass, tpe_id = credentials()
     
-    rec_amount, rec_nb, unpaid, expired = get_dotations('Recurrent', tpe_id=tpe_id, full=full)
-    ponc_amount, ponc_nb, _, _ = get_dotations('Ponctuel', tpe_id=tpe_id, full=full)
+    rec_amount, rec_nb, unpaid, expired = get_dotations(tpe_id, 'Recurrent', full)
+    ponc_amount, ponc_nb, _, _ = get_dotations(tpe_id, 'Ponctuel', full)
     
     if args.output:
         sys.stdout = args.output
