@@ -170,7 +170,7 @@ if __name__ == '__main__':
     
     if args.export == 'text':
         print('-----------------------------------------------------------------------------')
-        print('# Du %s au %s' % (begin_date(), end_date()))
+        print('# Du %s au %s                                                                ' % (begin_date(), end_date()))
         print('-----------------------------------------------------------------------------')
         print('# Total de dons ponctuels                                  |    %10s €       ' % ponc_amount)
         print('# Nombre de donateurs ponctuels                            |    %10s         ' % ponc_nb)
