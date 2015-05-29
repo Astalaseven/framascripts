@@ -1,4 +1,4 @@
-get-donation.py
+get-dotations.py
 ===============
 
 Install
