@@ -5,7 +5,7 @@ import argparse
 import ConfigParser
 import json
 import sys
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as et
 from datetime import datetime
 
 import requests
@@ -93,7 +93,7 @@ def get_dotations(donation_type='Recurrent', tpe_id=None, full=False):
     
     url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__VIEWSTATE=/wEPDwULLTE1NDI1MDc3MTVkZA==&tpe_id={0}:PR&SelectionCritere=Achat&Date_Debut={1}&Date_Fin={2}&NumeroTpe={0}:PR&export=XML'.format(tpe_id, begin_date(), end_date())
     
-    root = ET.fromstring(s.get(url).content)
+    root = et.fromstring(s.get(url).content)
     
     total_amount   = 0
     total_donators = 0
