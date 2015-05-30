@@ -48,7 +48,7 @@ def credentials(donation_type='Recurrent'):
 
 
 def now():
-    '''Return the date of the day.'''
+    '''Return current date.'''
     return datetime.now()
     
     
@@ -63,7 +63,7 @@ def end_date():
     
     
 def card_is_expired(reference, date_donation, tpe_id):
-    '''Return True if the donation card expires next month.'''
+    '''Return True if donation card expires next month.'''
     url  = 'https://www.cmcicpaiement.fr/fr/client/Paiement/DetailPaiement.aspx?reference={0}&tpe={1}&date={2}&tpe_id={1}:PR'.format(reference, tpe_id, date_donation)
     html = bs(s.get(url).content)
 
@@ -84,7 +84,7 @@ def card_is_expired(reference, date_donation, tpe_id):
 
     
 def get_donations(tpe_id, donation_type='Recurrent', full=False):
-    '''Get donations information from CMCIC website.'''
+    '''Get donation information from CMCIC website.'''
     authenticate(donation_type)
 
     url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__VIEWSTATE=/wEPDwULLTE1NDI1MDc3MTVkZA==&tpe_id={0}:PR&SelectionCritere=Achat&Date_Debut={1}&Date_Fin={2}&NumeroTpe={0}:PR&export=XML'.format(tpe_id, begin_date(), end_date())
