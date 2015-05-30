@@ -62,9 +62,9 @@ def end_date():
     return (now() + relativedelta(months=+1)).strftime('%d/%m/%Y')
     
     
-def card_is_expired(reference, date_dotation, tpe_id):
+def card_is_expired(reference, date_donation, tpe_id):
     '''Return True if the donation card expires next month.'''
-    url  = 'https://www.cmcicpaiement.fr/fr/client/Paiement/DetailPaiement.aspx?reference={0}&tpe={1}&date={2}&tpe_id={1}:PR'.format(reference, tpe_id, date_dotation)
+    url  = 'https://www.cmcicpaiement.fr/fr/client/Paiement/DetailPaiement.aspx?reference={0}&tpe={1}&date={2}&tpe_id={1}:PR'.format(reference, tpe_id, date_donation)
     html = bs(s.get(url).content)
 
     try:
@@ -83,8 +83,8 @@ def card_is_expired(reference, date_dotation, tpe_id):
         return False
 
     
-def get_dotations(tpe_id, donation_type='Recurrent', full=False):
-    '''Get dotations information from CMCIC website.'''
+def get_donations(tpe_id, donation_type='Recurrent', full=False):
+    '''Get donations information from CMCIC website.'''
     authenticate(donation_type)
 
     url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__VIEWSTATE=/wEPDwULLTE1NDI1MDc3MTVkZA==&tpe_id={0}:PR&SelectionCritere=Achat&Date_Debut={1}&Date_Fin={2}&NumeroTpe={0}:PR&export=XML'.format(tpe_id, begin_date(), end_date())
@@ -120,10 +120,10 @@ def get_dotations(tpe_id, donation_type='Recurrent', full=False):
     return total_amount, total_donators, unpaid, expired
 
 
-def pprint(dotations, columns=5):
+def pprint(donations, columns=5):
     str = ' '
     cpt = 0
-    for cpt, elem in enumerate(dotations, 1):
+    for cpt, elem in enumerate(donations, 1):
         str += elem + '    '
         if cpt % columns == 0:
             print(str)
@@ -162,8 +162,8 @@ if __name__ == '__main__':
     
     cm_user, cm_pass, tpe_id = credentials()
     
-    rec_amount, rec_nb, unpaid, expired = get_dotations(tpe_id, 'Recurrent', full)
-    ponc_amount, ponc_nb, _, _ = get_dotations(tpe_id, 'Ponctuel', full)
+    rec_amount, rec_nb, unpaid, expired = get_donations(tpe_id, 'Recurrent', full)
+    ponc_amount, ponc_nb, _, _ = get_donations(tpe_id, 'Ponctuel', full)
     
     if args.output:
         sys.stdout = args.output

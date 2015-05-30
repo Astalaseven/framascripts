@@ -1,5 +1,5 @@
-get-dotations.py
-===============
+get-donations.py
+================
 
 Install
 -------
@@ -18,11 +18,11 @@ Usage
 -----
 
 ```bash
-python get-dotations.py [-h] [--full] [--export {text,json}] [-o file.{txt,json}]
+python get-donations.py [-h] [--full] [--export {text,json}] [-o file.{txt,json}]
 ```
 
 or
 
 ```bash
-./get-dotations.py [-h] [--full] [--export {text,json}] [-o file.{txt,json}]
+./get-donations.py [-h] [--full] [--export {text,json}] [-o file.{txt,json}]
 ```
