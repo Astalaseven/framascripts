@@ -7,6 +7,7 @@ import json
 import sys
 import xml.etree.ElementTree as et
 from datetime import datetime
+from os import path
 
 import requests
 from BeautifulSoup import BeautifulSoup as bs
@@ -16,8 +17,7 @@ from dateutil.relativedelta import relativedelta
 
 s = requests.Session()
 config = ConfigParser.ConfigParser()
-config.read('cmcic.cfg')
-
+config.read(path.join(path.dirname(path.realpath(__file__)), 'cmcic.cfg'))
 
 def authenticate(donation_type='Recurrent'):
     '''Authenticate and create a session on CMCIC website.'''
