@@ -19,18 +19,40 @@ s = requests.Session()
 config = ConfigParser.ConfigParser()
 config.read(path.join(path.dirname(path.realpath(__file__)), 'cmcic.cfg'))
 
-def authenticate(donation_type='Recurrent'):
+donation_types = {'r': 'recurring', 'o': 'one-time'}
+
+
+def authenticate(donation_type):
     '''Authenticate and create a session on CMCIC website.'''
-    cm_user, cm_pass, _ = credentials(donation_type)
+    url = 'https://www.cmcicpaiement.fr/fr/identification/default.cgi'
+    cm_user, cm_pass = credentials(donation_type)
     payload = {'_cm_user': cm_user, '_cm_pwd': cm_pass}
-    r = s.post('https://www.cmcicpaiement.fr/fr/identification/default.cgi', data=payload)
+    return s.post(url, data=payload).status_code == 200
 
+    
+def tpe_id(donation_type):
+    '''Return tpe_id from config file.'''
+    if donation_type not in donation_types.values():
+        print('ERROR: unknown donation type')
+        exit()
 
-def credentials(donation_type='Recurrent'):
+    tpe_id  = config.get(donation_type, 'tpe_id')
+        
+    if not tpe_id:
+        print('ERROR: tpe_id not defined in config file')
+        exit()
+
+    return tpe_id
+    
+    
+def credentials(donation_type):
     '''Return credentials from config file.'''
+    if donation_type not in donation_types.values():
+        print('ERROR: unknown donation type')
+        exit()
+
     cm_user = config.get(donation_type, 'cm_user')
     cm_pass = config.get(donation_type, 'cm_pass')
-    tpe_id  = config.get(donation_type, 'tpe_id')
     
     if not cm_user:
         print('ERROR: cm_user not defined in config file')
@@ -39,12 +61,8 @@ def credentials(donation_type='Recurrent'):
     if not cm_pass:
         print('ERROR: cm_pass not defined in config file')
         exit()
-        
-    if not tpe_id:
-        print('ERROR: tpe_id not defined in config file')
-        exit()
 
-    return cm_user, cm_pass, tpe_id
+    return cm_user, cm_pass
 
 
 def now():
@@ -52,14 +70,14 @@ def now():
     return datetime.now()
     
     
-def begin_date():
+def begin_date(format='%d/%m/%Y'):
     '''Return the date one month ago formatted.'''
-    return (now() + relativedelta(months=-1)).strftime('%d/%m/%Y')
+    return (now() + relativedelta(months=-1, day=1)).strftime(format)
     
     
-def end_date():
+def end_date(format='%d/%m/%Y'):
     ''' Return the date in one month formatted.'''
-    return (now() + relativedelta(months=+1)).strftime('%d/%m/%Y')
+    return (now() + relativedelta(months=+1, day=1)).strftime(format)
     
     
 def card_is_expired(reference, date_donation, tpe_id):
@@ -76,16 +94,18 @@ def card_is_expired(reference, date_donation, tpe_id):
             return False
         
         current_month = now().strftime('%m/%y')
-        next_month    = (now() + relativedelta(months=+1)).strftime('%m/%y')
+        next_month    = end_date('%m/%y')
         
         return expiration_date if expiration_date in (current_month, next_month) else False
     except AttributError:
         return False
 
     
-def get_donations(tpe_id, donation_type='Recurrent', full=False):
+def get_donations(tpe_id, donation_type, full=False):
     '''Get donation information from CMCIC website.'''
-    authenticate(donation_type)
+    if not authenticate(donation_type):
+        print('ERROR: Could not authenticate')
+        exit()
 
     url = 'https://www.cmcicpaiement.fr/fr/client/Paiement/Paiement_RechercheAvancee.aspx?__VIEWSTATE=/wEPDwULLTE1NDI1MDc3MTVkZA==&tpe_id={0}:PR&SelectionCritere=Achat&Date_Debut={1}&Date_Fin={2}&NumeroTpe={0}:PR&export=XML'.format(tpe_id, begin_date(), end_date())
     
@@ -106,16 +126,16 @@ def get_donations(tpe_id, donation_type='Recurrent', full=False):
             state     = order.find('Etat').text
             
             if str(amount) != '-21474836.48': # ugly hack to fix some overflow issue
-                total_amount += int(amount)
-            total_donators += 1
+                total_amount   += int(amount)
+                total_donators += 1
             
-            if full and donation_type == 'Recurrent':
-                if state.encode('utf-8') != 'Payé':
-                    unpaid.append(num_order)
-                
-                exp = card_is_expired(num_order, pay_date, tpe_id)
-                if exp:
-                    expired.append(num_order.encode('utf-8'))
+                if full and donation_type == donation_types['r']:
+                    if state.encode('utf-8') != 'Payé':
+                        unpaid.append(num_order)
+                    
+                    exp = card_is_expired(num_order, pay_date, tpe_id)
+                    if exp:
+                        expired.append(num_order.encode('utf-8'))
                             
     return total_amount, total_donators, unpaid, expired
 
@@ -159,34 +179,35 @@ if __name__ == '__main__':
     
     args = parser.parse_args()
     full = args.full
+
+    recurring = donation_types['r']
+    onetime   = donation_types['o']
     
-    cm_user, cm_pass, tpe_id = credentials()
-    
-    rec_amount, rec_nb, unpaid, expired = get_donations(tpe_id, 'Recurrent', full)
-    ponc_amount, ponc_nb, _, _ = get_donations(tpe_id, 'Ponctuel', full)
+    rec_amount, rec_nb, unpaid, expired = get_donations(tpe_id(recurring), recurring, full)
+    ponc_amount, ponc_nb, _, _ = get_donations(tpe_id(onetime), onetime, full)
     
     if args.output:
         sys.stdout = args.output
     
     if args.export == 'text':
-        print('-----------------------------------------------------------------------------')
-        print('# Du %s au %s                                                                ' % (begin_date(), end_date()))
-        print('-----------------------------------------------------------------------------')
-        print('# Total de dons ponctuels                                  |    %10s €       ' % ponc_amount)
-        print('# Nombre de donateurs ponctuels                            |    %10s         ' % ponc_nb)
-        print('-----------------------------------------------------------------------------')
-        print('# Total de dons récurrents                                 |    %10s €       ' % rec_amount)
-        print('# Nombre de donateurs récurrents                           |    %10s         ' % rec_nb)
-        print('# Nombre de cartes expirées                                |    %10s         ' % len(expired))
-        print('# Nombre de dons qui requièrent une action                 |    %10s         ' % len(unpaid))
-        print('-----------------------------------------------------------------------------')
+        print('--------------------------------------------------------------------------')
+        print('# Du %s au %s                                                             ' % (begin_date(), end_date()))
+        print('--------------------------------------------------------------------------')
+        print('# Total de dons ponctuels                                |    %10s €      ' % ponc_amount)
+        print('# Nombre de donateurs ponctuels                          |    %10s        ' % ponc_nb)
+        print('--------------------------------------------------------------------------')
+        print('# Total de dons récurrents                               |    %10s €      ' % rec_amount)
+        print('# Nombre de donateurs récurrents                         |    %10s        ' % rec_nb)
+        print('# Nombre de cartes expirées                              |    %10s        ' % len(expired))
+        print('# Nombre de dons qui requièrent une action               |    %10s        ' % len(unpaid))
+        print('--------------------------------------------------------------------------')
         if full:
             print('### Références des dons qui requièrent une action ###')
             pprint(unpaid)
-            print('-----------------------------------------------------------------------------')
+            print('--------------------------------------------------------------------------')
             print('### Références des cartes expirées ###')
             pprint(expired)
-            print('-----------------------------------------------------------------------------')
+            print('--------------------------------------------------------------------------')
     elif args.export == 'json':
         print(
             json.dumps({
@@ -200,6 +221,6 @@ if __name__ == '__main__':
                 'nb_action': len(unpaid),
                 'unpaid': unpaid,
                 'expired': expired,
-            })
+            }, sort_keys=True, indent=4, separators=(',', ': '))
         )
         
