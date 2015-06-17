@@ -19,7 +19,7 @@ s = requests.Session()
 config = ConfigParser.ConfigParser()
 config.read(path.join(path.dirname(path.realpath(__file__)), 'cmcic.cfg'))
 
-donation_types = config.sections() # [recurrent, onetime, ...]
+donation_types = config.sections() # ['recurrent', 'onetime', ...]
 
 
 def authenticate(donation_type):
@@ -181,7 +181,25 @@ def text_export(donation_type, amount, nb, unpaid, expired):
             print('-----------------------------------------------------------------------------')
 
 
-if __name__ == '__main__':    
+def exit_handler():
+    os.unlink(pidfile)
+
+
+if __name__ == '__main__':
+    import atexit
+    import os
+
+    pid     = str(os.getpid())
+    pidfile = '/tmp/get_donations.pid'
+
+    if os.path.isfile(pidfile):
+        print('{} already exists, exiting'.format(pidfile))
+        exit()
+    else:
+        file(pidfile, 'w').write(pid)
+        
+    atexit.register(exit_handler)
+   
     parser = argparse.ArgumentParser(
         description='Donation statistics from CMCIC',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
