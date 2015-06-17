@@ -9,7 +9,7 @@ git clone https://github.com/Astalaseven/framascripts.git
 cd framascripts
 virtualenv ve
 source ve/bin/activate
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 `cmcic.cfg` needs to be filled with correct credentials.
